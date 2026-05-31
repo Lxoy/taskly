@@ -89,9 +89,9 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\dev\\taskly\\backend\\backend.API\\backend.API.csproj",
-      "projectName": "backend.API",
-      "projectPath": "D:\\dev\\taskly\\backend\\backend.API\\backend.API.csproj",
+      "projectUniqueName": "D:\\dev\\taskly\\backend\\backend.API\\taskly.API.csproj",
+      "projectName": "taskly.API",
+      "projectPath": "D:\\dev\\taskly\\backend\\backend.API\\taskly.API.csproj",
       "packagesPath": "C:\\Users\\lo14l\\.nuget\\packages\\",
       "outputPath": "D:\\dev\\taskly\\backend\\backend.API\\obj\\",
       "projectStyle": "PackageReference",
