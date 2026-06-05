@@ -1,3 +1,5 @@
 <Solution>
-  <Project Path="backend.API/backend.API.csproj" />
+  <Project Path="backend.API/taskly.API.csproj" />
+  <Project Path="taskly.Data/taskly.Data.csproj" Id="ab8d0776-147f-49ec-92ee-806321d019bb" />
+  <Project Path="taskly.Services/taskly.Services.csproj" Id="77021081-1ec5-4437-8645-33306667675d" />
 </Solution>
