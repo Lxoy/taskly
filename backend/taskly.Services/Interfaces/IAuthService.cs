@@ -1,14 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using taskly.Services.Dtos;
+﻿using taskly.Data.Models;
+using taskly.Services.Dtos.Auth;
+using taskly.Services.Dtos.Base;
 
 namespace taskly.Services.Interfaces
 {
     public interface IAuthService
     {
-        Task<AuthDto> LoginAsync(LoginDto request);
-
-        Task<AuthDto> RegisterAsync(RegisterDto request);
+        Task<BaseResponse<AuthDto>> LoginAsync(LoginDto request);
+        Task<AuthDto> RefreshUserTokenAsync(User user);
+        Task<BaseResponse<AuthDto>> RegisterAsync(RegisterDto request);
     }
 }

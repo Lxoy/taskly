@@ -6,7 +6,8 @@ using System.Security.Claims;
 using System.Text;
 using taskly.Data;
 using taskly.Data.Models;
-using taskly.Services.Dtos;
+using taskly.Services.Dtos.Auth;
+using taskly.Services.Dtos.Base;
 using taskly.Services.Interfaces;
 using taskly.Services.Options;
 
@@ -25,9 +26,9 @@ namespace taskly.Services.Services
             _jwtOptions = jwtOptions.Value;
         }
 
-        public async Task<AuthDto> LoginAsync(LoginDto request)
+        public async Task<BaseResponse<AuthDto>> LoginAsync(LoginDto request)
         {
-            var response = new AuthDto();
+            var response = new BaseResponse<AuthDto>();
 
             var user = await _dbContext.Users
                 .FirstOrDefaultAsync(x => x.Email == request.Email);
@@ -47,14 +48,29 @@ namespace taskly.Services.Services
             var jwt = GenerateJwt(user);
 
             response.Success = true;
-            response.AccessToken = jwt;
+            response.Data = new AuthDto
+            {
+                AccessToken = jwt
+            };
 
             return response;
         }
 
-        public async Task<AuthDto> RegisterAsync(RegisterDto request)
+        public async Task<AuthDto> RefreshUserTokenAsync(User user)
         {
-            var response = new AuthDto();
+            var jwt = GenerateJwt(user);
+
+            var response = new AuthDto
+            {
+                AccessToken = jwt
+            };
+
+            return response;
+        }
+
+        public async Task<BaseResponse<AuthDto>> RegisterAsync(RegisterDto request)
+        {
+            var response = new BaseResponse<AuthDto>();
 
             var userExists = await _dbContext.Users
                 .AnyAsync(x => x.Email == request.Email);
@@ -81,7 +97,10 @@ namespace taskly.Services.Services
             var jwt = GenerateJwt(newUser);
 
             response.Success = true;
-            response.AccessToken = jwt;
+            response.Data = new AuthDto
+            {
+                AccessToken = jwt
+            };
 
             return response;
         }

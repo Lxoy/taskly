@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using taskly.Data;
 using taskly.Data.Models;
-using taskly.Services.Dtos;
+using taskly.Services.Dtos.Base;
+using taskly.Services.Dtos.Category;
 using taskly.Services.Interfaces;
 
 namespace taskly.Services.Services
@@ -31,6 +32,7 @@ namespace taskly.Services.Services
                 {
                     Id = c.Id,
                     Name = c.Name,
+                    Icon = c.Icon,
                     Color = c.Color
                 })
                 .ToListAsync();
@@ -51,20 +53,12 @@ namespace taskly.Services.Services
         {
             var response = new BaseResponse();
 
-            var user = await _dbContext.Users.AnyAsync(u => u.Id == userId && u.IsActive == true);
-
-            if (!user)
-            {
-                response.Success = false;
-                response.SetNotFound("User");
-                return response;
-            }
-
             _dbContext.Categories.Add(new Category
             {
                 CreatedAt = DateTime.UtcNow,
                 UserId = userId,
                 Name = request.Name,
+                Icon = request.Icon,
                 Color = request.Color,
             });
 
@@ -103,6 +97,10 @@ namespace taskly.Services.Services
 
             if (request.Name != null)
                 category.Name = request.Name;
+
+            if (request.Icon != null)
+                category.Icon = request.Icon;
+
             if (request.Color != null)
                 category.Color = request.Color;
 

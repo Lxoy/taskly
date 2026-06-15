@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using System.Security.Claims;
 using taskly.API.ViewModels.Requests;
-using taskly.Services.Dtos;
+using taskly.Services.Dtos.Category;
 using taskly.Services.Interfaces;
 
 namespace taskly.API.Controllers
@@ -25,10 +24,14 @@ namespace taskly.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> GetCategories()
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Unauthorized();
+
             var response = await _categoryService.GetCategories(userId);
+
             if (!response.Success)
                 return BadRequest(new { response.Message });
+
             return Ok(response.Data);
         }
 
@@ -38,11 +41,13 @@ namespace taskly.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryRequest request)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Unauthorized();
 
             var createCategoryDto = new CreateCategoryDto
             {
                 Name = request.Name,
+                Icon = request.Icon,
                 Color = request.Color
             };
 
@@ -59,15 +64,20 @@ namespace taskly.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateCategory(int id, [FromBody] UpdateCategoryRequest request)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Unauthorized();
+
             var updateCategoryDto = new UpdateCategoryDto
             {
                 Name = request.Name,
+                Icon = request.Icon,
                 Color = request.Color
             };
             var response = await _categoryService.UpdateCategory(userId, id, updateCategoryDto);
+
             if (!response.Success)
                 return BadRequest(new { response.Message });
+
             return Ok();
         }
 
@@ -78,10 +88,14 @@ namespace taskly.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteCategory(int id)
         {
-            var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Unauthorized();
+
             var response = await _categoryService.DeleteCategory(userId, id);
+
             if (!response.Success)
                 return BadRequest(new { response.Message });
+
             return Ok();
         }
     }

@@ -1,19 +1,34 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using System;
 using System.Text;
+using taskly.API.Authorization;
 using taskly.API.Handlers;
 using taskly.Data;
 using taskly.Services;
-using taskly.Services.Dtos;
+using taskly.Services.Dtos.Base;
 using taskly.Services.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddServices();
+builder.Services.AddScoped<IAuthorizationHandler, ActiveUserHandler>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("ActiveUser", policy =>
+        policy.Requirements.Add(new ActiveUserRequirement()));
+
+    // Ovo postavlja ActiveUser kao DEFAULT policy za sve endpointe
+    // znači ne moraš pisati [Authorize(Policy = "ActiveUser")] svuda
+    options.DefaultPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .AddRequirements(new ActiveUserRequirement())
+        .Build();
+});
 
 builder.Services.AddSingleton<GlobalExceptionHandler>();
 
@@ -52,7 +67,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "Bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Upi�i JWT token."
+        Description = "Upiši JWT token."
     });
 
     options.AddSecurityRequirement(document => new()
@@ -104,7 +119,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

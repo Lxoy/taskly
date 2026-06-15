@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using taskly.Services.Dtos;
+using taskly.Services.Dtos.Base;
+using taskly.Services.Dtos.Category;
 
 namespace taskly.Services.Interfaces
 {

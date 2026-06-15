@@ -1,8 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using taskly.Data.Models;
 
 namespace taskly.Data.Configurations
@@ -30,12 +27,16 @@ namespace taskly.Data.Configurations
                 .IsRequired()
                 .HasMaxLength(100);
 
+            builder.Property(c => c.Icon)
+                .IsRequired()
+                .HasMaxLength(100);
+
             builder.Property(c => c.Color)
                 .IsRequired()
                 .HasMaxLength(7);
 
             builder.HasOne(c => c.User)
-                .WithMany()
+                .WithMany(u => u.Categories)
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
         }

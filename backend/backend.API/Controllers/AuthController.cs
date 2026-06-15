@@ -1,9 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using taskly.Services.Interfaces;
-using taskly.Services.Dtos;
-using Microsoft.AspNetCore.Authorization;
 using taskly.API.ViewModels.Requests;
+using taskly.Services.Dtos.Auth;
 
 namespace taskly.API.Controllers
 {
@@ -35,7 +33,7 @@ namespace taskly.API.Controllers
 
             return Ok(new
             {
-                token = response.AccessToken,
+                token = response.Data.AccessToken
             });
         }
 
@@ -57,15 +55,8 @@ namespace taskly.API.Controllers
 
             return Ok(new
             {
-                token = response.AccessToken,
+                token = response.Data.AccessToken
             });
-        }
-
-        [Authorize]
-        [HttpGet("test")]
-        public IActionResult Test()
-        {
-            return Ok("API is working!");
         }
     }
 }
