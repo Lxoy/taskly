@@ -19,6 +19,7 @@ namespace taskly.API.ViewModels.Requests
         public RecurrenceType RecurrenceType { get; set; }
         [Range(1, int.MaxValue)]
         public int RecurrenceInterval { get; set; } = 1;
+        public WeekDays? RecurrenceDaysMask { get; set; }
         [Required]
         [FutureDate]
         public DateTime ScheduledDate { get; set; }

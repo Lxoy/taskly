@@ -30,15 +30,19 @@ class HomeData {
 }
 
 class HomeScheduleEntry {
-  final int id;
+  final int entryId;
+  final int? anomalyId;
   final String title;
+  final int? categoryId;
   final int daysUntilDue;
   final DateTime? dueDate;
   final double? amount;
 
   const HomeScheduleEntry({
-    required this.id,
+    required this.entryId,
+    this.anomalyId,
     required this.title,
+    this.categoryId,
     required this.daysUntilDue,
     this.dueDate,
     this.amount,
@@ -46,11 +50,13 @@ class HomeScheduleEntry {
 
   factory HomeScheduleEntry.fromJson(Map<String, dynamic> json) {
     return HomeScheduleEntry(
-      id: json['id'] as int,
+      entryId: json['entryId'] as int,
+      anomalyId: json['anomalyId'] as int?,
       title: json['title'] as String,
+      categoryId: json['categoryId'] as int?,
       daysUntilDue: json['daysUntilDue'] as int,
       dueDate: json['dueDate'] != null
-          ? DateTime.parse(json['dueDate'] as String)
+          ? DateTime.parse(json['dueDate'] as String).toLocal()
           : null,
       amount: json['amount'] != null
           ? (json['amount'] as num).toDouble()

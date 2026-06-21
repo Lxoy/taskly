@@ -42,7 +42,7 @@ namespace taskly.API.Controllers
 
             return Ok(new
             {
-                token = response.Data
+                token = response.Data.AccessToken
             });
         }
 
@@ -65,6 +65,20 @@ namespace taskly.API.Controllers
                 return BadRequest(new { response.Message });
 
             return NoContent();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetUser()
+        {
+            if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
+                return Unauthorized();
+
+            var response = await _userService.GetUser(userId);
+
+            if (!response.Success)
+                return BadRequest(new { response.Message });
+
+            return Ok(response.Data);
         }
     }
 }

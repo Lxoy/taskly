@@ -2,7 +2,7 @@
 
 namespace taskly.Services.Dtos.Entry
 {
-    public class UpdateEntryDto
+    public class UpdateEntryAllDto
     {
         public int? CategoryId { get; set; }
         public string? Title { get; set; }
@@ -11,6 +11,7 @@ namespace taskly.Services.Dtos.Entry
         public Priority? Priority { get; set; }
         public RecurrenceType? RecurrenceType { get; set; }
         public int? RecurrenceInterval { get; set; }
+        public WeekDays? RecurrenceDaysMask { get; set; }
         public DateTime? ScheduledDate { get; set; }
         public DateTime? RecurrenceEndDate { get; set; }
     }

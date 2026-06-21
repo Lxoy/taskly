@@ -10,72 +10,73 @@ namespace taskly.Services.Services
     internal class HomeService : IHomeService
     {
         private readonly ApplicationDbContext _dbContext;
-        private readonly IEntryAnomalyService _occurrenceService;
+        private readonly IEntryService _entryService;
+        private readonly TimeProvider _timeProvider;
 
-        public HomeService(ApplicationDbContext dbContext, IEntryAnomalyService occurrenceService)
+        public HomeService(
+            ApplicationDbContext dbContext,
+            IEntryService entryService,
+            TimeProvider timeProvider)
         {
             _dbContext = dbContext;
-            _occurrenceService = occurrenceService;
+            _entryService = entryService;
+            _timeProvider = timeProvider;
         }
 
         public async Task<BaseResponse<HomeDto>> GetHomeData(int userId)
         {
             var response = new BaseResponse<HomeDto>();
 
-            var userExists = await _dbContext.Users.AnyAsync(u => u.Id == userId && u.IsActive);
+            var userExists = await _dbContext.Users
+                .AnyAsync(u => u.Id == userId && u.IsActive);
+
             if (!userExists)
             {
                 response.SetNotFound("User");
                 return response;
             }
 
-            var now = DateTime.UtcNow;
-            var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-            // Materialized occurrences this month that are done
-            var completedOccurrences = await _dbContext.EntryOccurrences
-                .Include(o => o.Entry)
-                .Where(o => o.Entry.UserId == userId
-                         && o.IsActive
-                         && o.OccurrenceDate >= monthStart
-                         && o.OccurrenceDate <= monthEnd
-                         && o.Status == EntryStatus.Completed)
-                .ToListAsync();
+            var occurrencesResponse = await _entryService.GetOccurrencesForMonth(
+                userId,
+                now.Year,
+                now.Month);
 
-            var moneySpent = completedOccurrences.Sum(o => o.Amount ?? o.Entry.Amount ?? 0);
-            var finishedCount = completedOccurrences.Count;
+            var occurrences = occurrencesResponse.Success && occurrencesResponse.Data is not null
+                ? occurrencesResponse.Data
+                : new();
 
-            // All occurrences for this month (virtual + materialized) via existing service
-            var occurrencesResponse = await _occurrenceService.GetOccurrencesForMonth(userId, now.Year, now.Month);
-            var occurrences = occurrencesResponse.Success ? occurrencesResponse.Data : new();
+            var finishedOccurrences = occurrences
+                .Where(o => o.OccurrenceDate < now)
+                .ToList();
 
-            var scheduledCount = occurrences.Count;
-
-            // Upcoming: not completed, from today onward, soonest first, top 10
-            var scheduleEntries = occurrences
-                .Where(o => o.Status != EntryStatus.Completed && o.OccurrenceDate >= now.Date)
+            var upcomingOccurrences = occurrences
+                .Where(o => o.OccurrenceDate >= now)
                 .OrderBy(o => o.OccurrenceDate)
-                .Take(10)
-                .Select(o => new HomeScheduleEntryDto
-                {
-                    Id = o.EntryId,          // virtual occurrences have no own Id
-                    Title = o.Title,
-                    DueDate = o.OccurrenceDate,
-                    Amount = o.Amount,
-                    DaysUntilDue = (int)(o.OccurrenceDate.Date - now.Date).TotalDays
-                })
                 .ToList();
 
             response.Success = true;
             response.Data = new HomeDto
             {
-                TotalMoneySpentThisMonth = moneySpent,
+                TotalMoneySpentThisMonth = finishedOccurrences.Sum(o => o.Amount ?? 0),
                 Month = now.ToString("MMMM"),
                 Year = now.Year.ToString(),
-                TotalEntriesFinishedThisMonth = finishedCount,
-                TotalEntriesScheduledForThisMonth = scheduledCount,
-                ScheduleEntries = scheduleEntries
+                TotalEntriesFinishedThisMonth = finishedOccurrences.Count,
+                TotalEntriesScheduledForThisMonth = upcomingOccurrences.Count,
+                ScheduleEntries = upcomingOccurrences
+                    .Take(10)
+                    .Select(o => new HomeScheduleEntryDto
+                    {
+                        EntryId = o.EntryId,
+                        AnomalyId = o.AnomalyId,
+                        Title = o.Title,
+                        CategoryId = o.CategoryId,
+                        DueDate = o.OccurrenceDate,
+                        Amount = o.Amount,
+                        DaysUntilDue = (int)(o.OccurrenceDate.Date - now.Date).TotalDays
+                    })
+                    .ToList()
             };
 
             return response;

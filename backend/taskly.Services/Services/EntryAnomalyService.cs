@@ -1,12 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using taskly.Data;
-using taskly.Data.Enums;
 using taskly.Data.Models;
 using taskly.Services.Dtos.Base;
-using taskly.Services.Dtos.Occurrence;
+using taskly.Services.Dtos.EntryAnomaly;
 using taskly.Services.Interfaces;
-using taskly.Services.Mappers;
-
 namespace taskly.Services.Services
 {
     internal class EntryAnomalyService : IEntryAnomalyService
@@ -18,91 +15,192 @@ namespace taskly.Services.Services
             _dbContext = dbContext;
         }
 
-        public async Task<BaseResponse<List<OccurrenceDto>>> GetOccurrencesForMonth(int userId, int year, int month)
+        public async Task<BaseResponse<AnomalyDto>> GetAnomaly(int userId, int anomalyId)
         {
-            var response = new BaseResponse<List<OccurrenceDto>>();
+            var response = new BaseResponse<AnomalyDto>();
 
-            var monthStart = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-            var monthEnd = monthStart.AddMonths(1).AddTicks(-1);
+            var anomaly = await _dbContext.EntryAnomalies
+                .Include(a => a.Entry)
+                .FirstOrDefaultAsync(a =>
+                    a.Id == anomalyId &&
+                    a.Entry.UserId == userId &&
+                    a.IsActive);
 
-            var entries = await _dbContext.Entries
-                .Where(e => e.UserId == userId && e.IsActive)
-                .ToListAsync();
-
-            var materialized = await _dbContext.EntryOccurrences
-                .Include(o => o.Entry)
-                .Where(o => o.Entry.UserId == userId
-                         && o.OccurrenceDate >= monthStart
-                         && o.OccurrenceDate <= monthEnd
-                         && o.IsActive)
-                .ToListAsync();
-
-            var result = new List<OccurrenceDto>();
-
-            foreach (var entry in entries)
+            if (anomaly is null)
             {
-                var dates = CalculateDatesInRange(entry, monthStart, monthEnd);
-
-                foreach (var date in dates)
-                {
-                    var mat = materialized.FirstOrDefault(m =>
-                        m.EntryId == entry.Id &&
-                        m.OccurrenceDate.Date == date.Date);
-
-                    if (mat != null)
-                    {
-                        result.Add(EntryOccurrenceMapper.ToDto(mat));
-                    }
-                    else
-                    {
-                        result.Add(EntryOccurrenceMapper.ToDto(entry, date));
-                    }
-                }
+                response.SetNotFound("Entry anomaly");
+                return response;
             }
 
             response.Success = true;
-            response.Data = result;
+            response.Data = new AnomalyDto
+            {
+                Id = anomaly.Id,
+                EntryId = anomaly.EntryId,
+                OccurrenceDate = anomaly.OccurrenceDate,
+                NewOccurrenceDate = anomaly.NewOccurrenceDate,
+                Title = anomaly.Title,
+                Description = anomaly.Description,
+                Amount = anomaly.Amount,
+                Priority = anomaly.Priority,
+                CategoryId = anomaly.CategoryId
+            };
 
             return response;
         }
 
-        private IEnumerable<DateTime> CalculateDatesInRange(Entry entry, DateTime from, DateTime to)
+        public async Task<BaseResponse> CreateEntryAnomaly(int userId, CreateEntryAnomalyDto dto)
         {
-            if (entry.ScheduledDate > to) yield break;
+            var response = new BaseResponse();
 
-            var endDate = entry.RecurrenceEndDate ?? to;
-            var current = entry.ScheduledDate;
+            var entry = await _dbContext.Entries
+                .FirstOrDefaultAsync(e =>
+                    e.Id == dto.EntryId &&
+                    e.UserId == userId &&
+                    e.IsActive);
 
-            if (entry.RecurrenceType != RecurrenceType.Once)
+            if (entry is null)
             {
-                while (current < from)
+                response.SetNotFound("Entry");
+                return response;
+            }
+
+            if (dto.CategoryId is not null)
+            {
+                var categoryExists = await _dbContext.Categories
+                    .AnyAsync(c =>
+                        c.Id == dto.CategoryId &&
+                        c.UserId == userId &&
+                        c.IsActive);
+
+                if (!categoryExists)
                 {
-                    current = Advance(current, entry);
+                    response.SetNotFound("Category");
+                    return response;
                 }
             }
 
-            while (current <= to && current <= endDate)
+            var occurrenceDate = DateTime.SpecifyKind(
+                dto.OccurrenceDate,
+                DateTimeKind.Utc);
+
+            DateTime? newOccurrenceDate = dto.NewOccurrenceDate.HasValue
+                ? DateTime.SpecifyKind(dto.NewOccurrenceDate.Value, DateTimeKind.Utc)
+                : null;
+
+            var anomaly = await _dbContext.EntryAnomalies
+                .FirstOrDefaultAsync(a =>
+                    a.EntryId == dto.EntryId &&
+                    a.OccurrenceDate == occurrenceDate);
+
+            if (anomaly is null)
             {
-                if (current >= from) yield return current;
+                anomaly = new EntryAnomaly
+                {
+                    EntryId = dto.EntryId,
+                    OccurrenceDate = occurrenceDate
+                };
 
-                if (entry.RecurrenceType == RecurrenceType.Once) yield break;
-
-                current = Advance(current, entry);
+                await _dbContext.EntryAnomalies.AddAsync(anomaly);
             }
+
+            anomaly.IsActive = true;
+            anomaly.IsDeleted = false;
+
+            anomaly.NewOccurrenceDate = newOccurrenceDate;
+
+            anomaly.Title = dto.Title ?? entry.Title;
+            anomaly.Description = dto.Description ?? entry.Description;
+            anomaly.Amount = dto.Amount ?? entry.Amount;
+            anomaly.Priority = dto.Priority ?? entry.Priority;
+            anomaly.CategoryId = dto.CategoryId;
+
+            await _dbContext.SaveChangesAsync();
+
+            response.Success = true;
+            return response;
         }
 
-        private static DateTime Advance(DateTime current, Entry entry)
+        public async Task<BaseResponse> EditEntryAnomaly(int userId, EditEntryAnomalyDto dto)
         {
-            return entry.RecurrenceType switch
+            var response = new BaseResponse();
+
+            var anomaly = await _dbContext.EntryAnomalies
+                .Include(a => a.Entry)
+                .FirstOrDefaultAsync(a =>
+                    a.Id == dto.AnomalyId &&
+                    a.Entry.UserId == userId &&
+                    a.IsActive);
+
+            if (anomaly is null)
             {
-                RecurrenceType.Daily => current.AddDays(entry.RecurrenceInterval),
-                RecurrenceType.Weekly => current.AddDays(7 * entry.RecurrenceInterval),
-                RecurrenceType.Monthly => current.AddMonths(entry.RecurrenceInterval),
-                RecurrenceType.Yearly => current.AddYears(entry.RecurrenceInterval),
-                _ => throw new ArgumentOutOfRangeException(
-                                              nameof(entry.RecurrenceType),
-                                              "Unknown recurrence type")
-            };
+                response.SetNotFound("Entry anomaly");
+                return response;
+            }
+
+            if (dto.CategoryId is not null)
+            {
+                var categoryExists = await _dbContext.Categories
+                    .AnyAsync(c =>
+                        c.Id == dto.CategoryId &&
+                        c.UserId == userId &&
+                        c.IsActive);
+
+                if (!categoryExists)
+                {
+                    response.SetNotFound("Category");
+                    return response;
+                }
+            }
+
+            if (dto.OccurrenceDate.HasValue)
+                anomaly.OccurrenceDate = dto.OccurrenceDate.Value;
+
+            anomaly.NewOccurrenceDate = dto.NewOccurrenceDate;
+
+            if (dto.Title is not null)
+                anomaly.Title = dto.Title;
+
+            anomaly.Description = dto.Description;
+            anomaly.Amount = dto.Amount;
+
+            if (dto.Priority is not null)
+                anomaly.Priority = dto.Priority.Value;
+
+            anomaly.CategoryId = dto.CategoryId;
+
+            anomaly.IsDeleted = false;
+
+            await _dbContext.SaveChangesAsync();
+
+            response.Success = true;
+            return response;
+        }
+
+        public async Task<BaseResponse> DeleteEntryAnomaly(int userId, int anomalyId)
+        {
+            var response = new BaseResponse();
+
+            var anomaly = await _dbContext.EntryAnomalies
+                .Include(a => a.Entry)
+                .FirstOrDefaultAsync(a =>
+                    a.Id == anomalyId &&
+                    a.Entry.UserId == userId &&
+                    a.IsActive);
+
+            if (anomaly is null)
+            {
+                response.SetNotFound("Entry anomaly");
+                return response;
+            }
+
+            anomaly.IsDeleted = true;
+            anomaly.IsActive = true;
+
+            await _dbContext.SaveChangesAsync();
+
+            response.Success = true;
+            return response;
         }
     }
 }

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:frontend/core/theme/app_colors.dart';
-import 'package:frontend/core/theme/app_text_styles.dart';
-import 'package:frontend/core/theme/app_spacing.dart';
 import 'package:frontend/core/theme/app_radius.dart';
+import 'package:frontend/core/theme/app_spacing.dart';
+import 'package:frontend/core/theme/app_text_styles.dart';
 import 'package:frontend/features/auth/bloc/auth_bloc.dart';
-import 'app_shell.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -15,310 +14,315 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _nameController     = TextEditingController();
-  final _emailController    = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmController  = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _obscureConfirm  = true;
-  bool _acceptTerms     = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmController.dispose();
     super.dispose();
   }
 
-  void _onRegisterPressed() {
-    final username = _nameController.text.trim();
-    final email    = _emailController.text.trim();
+  void _submit() {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
     final password = _passwordController.text;
-    final confirm  = _confirmController.text;
 
-    if (username.isEmpty || email.isEmpty || password.isEmpty) return;
-    if (password != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Lozinke se ne podudaraju.'),
-          backgroundColor: AppColors.warning,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-          margin: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
-        ),
-      );
+    if (username.isEmpty || email.isEmpty || password.isEmpty) {
+      _showSnack('Fill in all required fields.', AppColors.warning);
       return;
     }
-    if (!_acceptTerms) return;
 
     context.read<AuthBloc>().add(
-          RegisterSubmitted(email: email, username: username, password: password),
+          RegisterSubmitted(
+            email: email,
+            username: username,
+            password: password,
+          ),
         );
+  }
+
+  void _showSnack(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthAuthenticated) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const AppShell()),
-            (route) => false,
-          );
-        }
         if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.danger,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-              margin: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
-            ),
-          );
+          _showSnack(state.message, AppColors.danger);
         }
       },
       child: Scaffold(
+        backgroundColor: AppColors.background,
         body: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                // ── Top bar ─────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 42, height: 42,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            border: Border.all(color: const Color(0xFFE5E7EB)),
-                          ),
-                          child: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 18),
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Text('Novi račun', style: AppTextStyles.subtitle.copyWith(color: AppColors.textPrimary)),
-                    ],
-                  ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.lg,
                 ),
-
-                // ── Avatar icon ─────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 96, height: 96,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.primary.withOpacity(0.08),
-                        ),
-                      ),
-                      Container(
-                        width: 72, height: 72,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.primary.withOpacity(0.12),
-                        ),
-                      ),
-                      Container(
-                        width: 56, height: 56,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white, size: 26),
-                      ),
-                    ],
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - AppSpacing.lg * 2,
                   ),
-                ),
-
-                // ── Form ────────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(child: Text('Kreiraj račun', style: AppTextStyles.title.copyWith(color: AppColors.textPrimary))),
-                      const SizedBox(height: AppSpacing.xs),
-                      Center(child: Text('Počni pratiti svoje obveze danas', style: AppTextStyles.body.copyWith(color: AppColors.textSecondary))),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: _BackButton(
+                          onTap: () => Navigator.pop(context),
+                        ),
+                      ),
                       const SizedBox(height: AppSpacing.xl),
-
-                      _buildLabel('Ime i prezime'),
+                      const _BrandMark(),
+                      const SizedBox(height: AppSpacing.xxl),
+                      Text(
+                        'Create account',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.title.copyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.8,
+                        ),
+                      ),
                       const SizedBox(height: AppSpacing.sm),
-                      _buildTextField(controller: _nameController, hint: 'Lovro Babić', icon: Icons.person_outline_rounded),
+                      Text(
+                        'Start tracking tasks, routines and bills in one place.',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.textSecondary,
+                          height: 1.45,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+                      _AuthField(
+                        controller: _usernameController,
+                        label: 'Username',
+                        hint: 'lovro',
+                        icon: Icons.person_outline_rounded,
+                      ),
                       const SizedBox(height: AppSpacing.md),
-
-                      _buildLabel('Email adresa'),
-                      const SizedBox(height: AppSpacing.sm),
-                      _buildTextField(controller: _emailController, hint: 'ime@primjer.com', icon: Icons.mail_outline_rounded, keyboardType: TextInputType.emailAddress),
+                      _AuthField(
+                        controller: _emailController,
+                        label: 'Email',
+                        hint: 'you@example.com',
+                        icon: Icons.mail_outline_rounded,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
                       const SizedBox(height: AppSpacing.md),
-
-                      _buildLabel('Lozinka'),
-                      const SizedBox(height: AppSpacing.sm),
-                      _buildTextField(
+                      _AuthField(
                         controller: _passwordController,
-                        hint: 'Min. 8 znakova',
+                        label: 'Password',
+                        hint: 'Password',
                         icon: Icons.lock_outline_rounded,
-                        obscure: _obscurePassword,
-                        suffixIcon: GestureDetector(
-                          onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-                          child: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: AppColors.textSecondary, size: 20),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _buildPasswordStrength(),
-                      const SizedBox(height: AppSpacing.md),
-
-                      _buildLabel('Potvrdi lozinku'),
-                      const SizedBox(height: AppSpacing.sm),
-                      _buildTextField(
-                        controller: _confirmController,
-                        hint: 'Ponovi lozinku',
-                        icon: Icons.lock_outline_rounded,
-                        obscure: _obscureConfirm,
-                        suffixIcon: GestureDetector(
-                          onTap: () => setState(() => _obscureConfirm = !_obscureConfirm),
-                          child: Icon(_obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: AppColors.textSecondary, size: 20),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-
-                      // Terms checkbox
-                      GestureDetector(
-                        onTap: () => setState(() => _acceptTerms = !_acceptTerms),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              width: 22, height: 22,
-                              decoration: BoxDecoration(
-                                color: _acceptTerms ? AppColors.primary : Colors.transparent,
-                                borderRadius: BorderRadius.circular(AppRadius.sm / 2),
-                                border: Border.all(
-                                  color: _acceptTerms ? AppColors.primary : const Color(0xFFD1D5DB),
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: _acceptTerms ? const Icon(Icons.check_rounded, color: Colors.white, size: 14) : null,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: RichText(
-                                text: TextSpan(
-                                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, height: 1.5),
-                                  children: [
-                                    const TextSpan(text: 'Prihvaćam '),
-                                    TextSpan(text: 'Uvjete korištenja', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
-                                    const TextSpan(text: ' i '),
-                                    TextSpan(text: 'Politiku privatnosti', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500)),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
+                        obscureText: _obscurePassword,
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
-
-                      // Register button
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
-                          final isLoading = state is AuthLoading;
-                          return GestureDetector(
-                            onTap: isLoading ? null : _onRegisterPressed,
-                            child: _PrimaryButton(label: 'Registriraj se', isLoading: isLoading),
+                          return _PrimaryButton(
+                            label: 'Create account',
+                            isLoading: state is AuthLoading,
+                            onTap: _submit,
                           );
                         },
                       ),
-                      const SizedBox(height: AppSpacing.xl),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('Već imaš račun? ', style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Text('Prijavi se', style: AppTextStyles.body.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: AppSpacing.lg),
+                      Center(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: RichText(
+                            text: TextSpan(
+                              style: AppTextStyles.body.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                              children: [
+                                const TextSpan(text: 'Already have an account? '),
+                                TextSpan(
+                                  text: 'Log in',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
                     ],
                   ),
                 ),
-              ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BackButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _BackButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          size: 17,
+          color: AppColors.textPrimary,
+        ),
+      ),
+    );
+  }
+}
+
+class _BrandMark extends StatelessWidget {
+  const _BrandMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 68,
+          height: 68,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.25),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.done_rounded,
+            color: Colors.white,
+            size: 34,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Taskly',
+          style: AppTextStyles.subtitle.copyWith(
+            color: AppColors.textPrimary,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final bool obscureText;
+  final TextInputType keyboardType;
+  final Widget? suffixIcon;
+
+  const _AuthField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    this.obscureText = false,
+    this.keyboardType = TextInputType.text,
+    this.suffixIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTextStyles.body.copyWith(
+                color: AppColors.textSecondary.withOpacity(0.48),
+              ),
+              prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
+              suffixIcon: suffixIcon,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildPasswordStrength() {
-    return Row(
-      children: List.generate(4, (i) => Expanded(
-        child: Container(
-          margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
-          height: 3,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            color: i == 0 ? AppColors.primary : const Color(0xFFE5E7EB),
-          ),
-        ),
-      )),
-    );
-  }
-
-  Widget _buildLabel(String text) => Text(
-        text,
-        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-      );
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    bool obscure = false,
-    TextInputType keyboardType = TextInputType.text,
-    Widget? suffixIcon,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-        keyboardType: keyboardType,
-        style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.body.copyWith(color: AppColors.textSecondary.withOpacity(0.5)),
-          prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
-          suffixIcon: suffixIcon,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
-        ),
-      ),
+      ],
     );
   }
 }
@@ -326,29 +330,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final bool isLoading;
+  final VoidCallback onTap;
 
-  const _PrimaryButton({required this.label, this.isLoading = false});
+  const _PrimaryButton({
+    required this.label,
+    required this.onTap,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 52,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 180),
+        opacity: isLoading ? 0.7 : 1,
+        child: Container(
+          width: double.infinity,
+          height: 56,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
-        ],
-      ),
-      child: Center(
-        child: isLoading
-            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-            : Text(label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.4,
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
+        ),
       ),
     );
   }

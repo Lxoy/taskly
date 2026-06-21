@@ -42,9 +42,37 @@ namespace taskly.Services.Services
             return response;
         }
 
-        public Task<BaseResponse> UpdatePasswordAsync(int userId, UpdateUserPasswordDto request)
+        public async Task<BaseResponse> UpdatePasswordAsync(int userId, UpdateUserPasswordDto request)
         {
-            throw new NotImplementedException();
+            var response = new BaseResponse();
+
+            var user = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.Id == userId && u.IsActive);
+
+            if (user is null)
+            {
+                response.SetNotFound("User");
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                response.SetValidationError("Password is required.");
+                return response;
+            }
+
+            if (request.NewPassword != request.ConfirmedPassword)
+            {
+                response.SetValidationError("Passwords do not match.");
+                return response;
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+
+            await _dbContext.SaveChangesAsync();
+
+            response.Success = true;
+            return response;
         }
 
         private void ApplyUpdates(User user, UpdateUserDto request)
@@ -63,6 +91,35 @@ namespace taskly.Services.Services
 
             if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
                 user.PhoneNumber = request.PhoneNumber.Trim();
+        }
+
+        public async Task<BaseResponse<GetUserDto>> GetUser(int userId)
+        {
+            var response = new BaseResponse<GetUserDto>();
+
+            var user = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.Id == userId && u.IsActive);
+
+            if (user is null)
+            {
+                response.SetNotFound("User");
+                return response;
+            }
+
+            GetUserDto userDto = new GetUserDto
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Username = user.Username,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber
+            };
+
+
+            response.Data = userDto;
+
+            response.Success = true;
+            return response;
         }
     }
 }

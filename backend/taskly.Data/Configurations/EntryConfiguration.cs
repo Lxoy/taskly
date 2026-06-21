@@ -1,8 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using taskly.Data.Models;
 
 namespace taskly.Data.Configurations
@@ -47,10 +44,16 @@ namespace taskly.Data.Configurations
                 .IsRequired()
                 .HasDefaultValue(1);
 
+            builder.Property(e => e.RecurrenceDaysMask)
+                .HasConversion<int?>();
+
             builder.Property(e => e.ScheduledDate)
                 .IsRequired();
 
             builder.Property(e => e.RecurrenceEndDate);
+
+            builder.Property(e => e.SeriesId)
+                .IsRequired();
 
             builder.HasOne(e => e.User)
                 .WithMany(u => u.Entries)
@@ -61,6 +64,10 @@ namespace taskly.Data.Configurations
                 .WithMany(c => c.Entries)
                 .HasForeignKey(e => e.CategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasIndex(e => e.UserId);
+            builder.HasIndex(e => e.SeriesId);
+            builder.HasIndex(e => new { e.UserId, e.SeriesId });
         }
     }
 }

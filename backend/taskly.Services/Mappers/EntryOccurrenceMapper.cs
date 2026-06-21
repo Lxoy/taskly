@@ -1,43 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using taskly.Data.Enums;
-using taskly.Data.Models;
-using taskly.Services.Dtos.Occurrence;
-
+﻿using taskly.Data.Models;
+using taskly.Services.Dtos.Entry;
 namespace taskly.Services.Mappers
 {
-    internal class EntryOccurrenceMapper
+    internal static class EntryOccurrenceMapper
     {
-        public static OccurrenceDto ToDto(Entry entry, DateTime date)
+        public static EntryMonthDto ToDto(Entry entry, DateTime occurrenceDate)
         {
-            return new OccurrenceDto
+            return new EntryMonthDto
             {
                 EntryId = entry.Id,
-                OccurrenceDate = date,
+                AnomalyId = null,
+                OccurrenceDate = occurrenceDate,
+
                 Title = entry.Title,
                 Description = entry.Description,
                 Amount = entry.Amount,
                 Priority = entry.Priority,
-                CategoryId = entry.CategoryId,
-                Status = EntryStatus.Pending,
-                IsMaterialized = false
+                CategoryId = entry.CategoryId
             };
         }
 
-        public static OccurrenceDto ToDto(EntryAnomaly occurrence)
+        public static EntryMonthDto ToDto(EntryAnomaly anomaly)
         {
-            return new OccurrenceDto
+            return new EntryMonthDto
             {
-                EntryId = occurrence.EntryId,
-                OccurrenceDate = occurrence.OccurrenceDate,
-                Title = occurrence.Entry.Title,
-                Description = occurrence.Entry?.Description,
-                Amount = occurrence.Amount,
-                Priority = occurrence.Priority,
-                CategoryId = occurrence.Entry?.CategoryId,
-                Status = occurrence.Status,
-                IsMaterialized = true
+                EntryId = anomaly.EntryId,
+                AnomalyId = anomaly.Id,
+                OccurrenceDate = anomaly.NewOccurrenceDate ?? anomaly.OccurrenceDate,
+
+                Title = anomaly.Title,
+                Description = anomaly.Description,
+                Amount = anomaly.Amount,
+                Priority = anomaly.Priority,
+                CategoryId = anomaly.CategoryId
             };
         }
     }

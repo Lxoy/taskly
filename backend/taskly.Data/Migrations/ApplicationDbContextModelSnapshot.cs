@@ -94,6 +94,9 @@ namespace taskly.Data.Migrations
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("RecurrenceDaysMask")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("RecurrenceEndDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -108,6 +111,9 @@ namespace taskly.Data.Migrations
                     b.Property<DateTime>("ScheduledDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("SeriesId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -120,7 +126,11 @@ namespace taskly.Data.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("SeriesId");
+
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "SeriesId");
 
                     b.ToTable("entries", (string)null);
                 });
@@ -134,10 +144,17 @@ namespace taskly.Data.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<decimal?>("Amount")
-                        .HasColumnType("numeric");
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
 
                     b.Property<int>("EntryId")
                         .HasColumnType("integer");
@@ -145,7 +162,15 @@ namespace taskly.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("NewOccurrenceDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("OccurrenceDate")
@@ -154,16 +179,21 @@ namespace taskly.Data.Migrations
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("EntryId");
 
                     b.HasIndex("OccurrenceDate");
 
-                    b.HasIndex("EntryId", "OccurrenceDate");
+                    b.HasIndex("EntryId", "OccurrenceDate")
+                        .IsUnique();
 
                     b.ToTable("entry_anomalies", (string)null);
                 });
@@ -254,11 +284,18 @@ namespace taskly.Data.Migrations
 
             modelBuilder.Entity("taskly.Data.Models.EntryAnomaly", b =>
                 {
+                    b.HasOne("taskly.Data.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("taskly.Data.Models.Entry", "Entry")
                         .WithMany("EntryOccurrences")
                         .HasForeignKey("EntryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Category");
 
                     b.Navigation("Entry");
                 });

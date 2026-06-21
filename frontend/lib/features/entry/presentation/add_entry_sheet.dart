@@ -11,10 +11,11 @@ import 'package:frontend/data/models/category_models.dart';
 import 'package:frontend/data/models/entry_models.dart';
 import 'package:frontend/features/categories/bloc/category_bloc.dart';
 import 'package:frontend/features/entry/bloc/entry_bloc.dart';
+import 'package:frontend/core/utils/entry_refresh_bus.dart';
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
-void showAddEntrySheet(BuildContext context) {
+void showAddEntrySheet(BuildContext context, {VoidCallback? onChanged}) {
   final categoryBloc = context.read<CategoryBloc>();
   showModalBottomSheet(
     context: context,
@@ -25,7 +26,7 @@ void showAddEntrySheet(BuildContext context) {
         BlocProvider.value(value: categoryBloc),
         BlocProvider(create: (_) => sl<EntryBloc>()),
       ],
-      child: const _AddEntrySheet(),
+      child: _AddEntrySheet(onChanged: onChanged),
     ),
   );
 }
@@ -33,7 +34,9 @@ void showAddEntrySheet(BuildContext context) {
 // ── Sheet ─────────────────────────────────────────────────────────────────────
 
 class _AddEntrySheet extends StatefulWidget {
-  const _AddEntrySheet();
+  final VoidCallback? onChanged;
+
+  const _AddEntrySheet({this.onChanged});
 
   @override
   State<_AddEntrySheet> createState() => _AddEntrySheetState();
@@ -47,9 +50,14 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
   EntryPriority        _priority   = EntryPriority.medium;
   EntryRecurrenceType  _recurrence = EntryRecurrenceType.monthly;
   int                  _interval   = 1;
+  int                  _recurrenceDaysMask = 0;
   DateTime?            _scheduledDate;
   DateTime?            _recurrenceEndDate;
   int?                 _categoryId;
+  bool                 _titleError = false;
+  bool                 _dateError = false;
+  bool                 _weekDaysError = false;
+  bool                 _endDateError = false;
 
   @override
   void dispose() {
@@ -61,29 +69,29 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
 
   // ── Validation ────────────────────────────────────────────────────────────
 
-  String? _validate() {
-    if (_titleCtrl.text.trim().isEmpty) return 'Title is required.';
-    if (_scheduledDate == null) return 'Date & time is required.';
-    if (_recurrence != EntryRecurrenceType.once &&
-        _recurrenceEndDate == null) return 'End date is required.';
-    return null;
+  bool _validateFields() {
+    final hasTitleError = _titleCtrl.text.trim().isEmpty;
+    final hasDateError = _scheduledDate == null;
+    final hasWeekDaysError = _recurrence == EntryRecurrenceType.weekly &&
+        _recurrenceDaysMask == 0;
+    final hasEndDateError = _recurrence != EntryRecurrenceType.once &&
+        _recurrenceEndDate == null;
+
+    setState(() {
+      _titleError = hasTitleError;
+      _dateError = hasDateError;
+      _weekDaysError = hasWeekDaysError;
+      _endDateError = hasEndDateError;
+    });
+
+    return !(hasTitleError ||
+        hasDateError ||
+        hasWeekDaysError ||
+        hasEndDateError);
   }
 
   void _onSave() {
-    final error = _validate();
-    if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error),
-          backgroundColor: AppColors.warning,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.sm)),
-        ),
-      );
-      return;
-    }
+    if (!_validateFields()) return;
 
     final amount = double.tryParse(
         _amountCtrl.text.replaceAll(',', '.').trim());
@@ -100,6 +108,9 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
               priority:          _priority,
               recurrenceType:    _recurrence,
               recurrenceInterval: _interval,
+              recurrenceDaysMask: _recurrence == EntryRecurrenceType.weekly
+                  ? _recurrenceDaysMask
+                  : null,
               scheduledDate:     _scheduledDate!,
               recurrenceEndDate: _recurrenceEndDate,
             ),
@@ -145,8 +156,10 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
     setState(() {
       if (isEnd) {
         _recurrenceEndDate = combined;
+        _endDateError = false;
       } else {
         _scheduledDate = combined;
+        _dateError = false;
         if (_recurrenceEndDate != null &&
             _recurrenceEndDate!.isBefore(combined)) {
           _recurrenceEndDate = null;
@@ -181,6 +194,8 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
     return BlocListener<EntryBloc, EntryState>(
       listener: (context, state) {
         if (state is EntryCreated) {
+          notifyEntriesChanged();
+          widget.onChanged?.call();
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -280,6 +295,13 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
                         controller: _titleCtrl,
                         hint: 'e.g. Electricity, Netflix...',
                         icon: Icons.edit_outlined,
+                        hasError: _titleError,
+                        errorText: 'Title is required.',
+                        onChanged: (_) {
+                          if (_titleError && _titleCtrl.text.trim().isNotEmpty) {
+                            setState(() => _titleError = false);
+                          }
+                        },
                       ),
                       const SizedBox(height: AppSpacing.lg),
 
@@ -334,7 +356,14 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
                       const SizedBox(height: AppSpacing.sm),
                       _RecurrenceChips(
                         selected: _recurrence,
-                        onSelect: (r) => setState(() => _recurrence = r),
+                        onSelect: (r) => setState(() {
+                          _recurrence = r;
+                          _endDateError = false;
+                          if (r != EntryRecurrenceType.weekly) {
+                            _recurrenceDaysMask = 0;
+                            _weekDaysError = false;
+                          }
+                        }),
                       ),
 
                       // Interval
@@ -349,6 +378,21 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
                               () => _interval = (_interval + 1).clamp(1, 99)),
                         ),
                       ],
+
+                      if (_recurrence == EntryRecurrenceType.weekly) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        _Label('Repeat on'),
+                        const SizedBox(height: AppSpacing.sm),
+                        _WeekdaySelector(
+                          selectedMask: _recurrenceDaysMask,
+                          onChanged: (mask) => setState(() {
+                            _recurrenceDaysMask = mask;
+                            if (mask != 0) _weekDaysError = false;
+                          }),
+                        ),
+                        if (_weekDaysError)
+                          const _FieldErrorText('Select at least one weekday.'),
+                      ],
                       const SizedBox(height: AppSpacing.lg),
 
                       // Date & Time
@@ -357,6 +401,8 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
                       _DateTimeButton(
                         label: _fmtDateTime(_scheduledDate),
                         hasValue: _scheduledDate != null,
+                        hasError: _dateError,
+                        errorText: 'Date & time is required.',
                         onTap: () => _pickDateTime(isEnd: false),
                       ),
 
@@ -368,6 +414,8 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
                         _DateTimeButton(
                           label: _fmtDateTime(_recurrenceEndDate),
                           hasValue: _recurrenceEndDate != null,
+                          hasError: _endDateError,
+                          errorText: 'End date is required.',
                           onTap: () => _pickDateTime(isEnd: true),
                         ),
                       ],
@@ -589,6 +637,83 @@ class _SegmentedPriority extends StatelessWidget {
   }
 }
 
+
+// ── Weekday selector ──────────────────────────────────────────────────────────
+
+class _WeekdaySelector extends StatelessWidget {
+  final int selectedMask;
+  final ValueChanged<int> onChanged;
+
+  const _WeekdaySelector({
+    required this.selectedMask,
+    required this.onChanged,
+  });
+
+  static const _days = [
+    _WeekdayOption(label: 'Mon', mask: 1),
+    _WeekdayOption(label: 'Tue', mask: 2),
+    _WeekdayOption(label: 'Wed', mask: 4),
+    _WeekdayOption(label: 'Thu', mask: 8),
+    _WeekdayOption(label: 'Fri', mask: 16),
+    _WeekdayOption(label: 'Sat', mask: 32),
+    _WeekdayOption(label: 'Sun', mask: 64),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: _days.map((day) {
+        final selected = (selectedMask & day.mask) != 0;
+
+        return GestureDetector(
+          onTap: () {
+            final nextMask = selected
+                ? selectedMask & ~day.mask
+                : selectedMask | day.mask;
+
+            onChanged(nextMask);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            width: 44,
+            height: 40,
+            decoration: BoxDecoration(
+              color: selected ? AppColors.primary : AppColors.background,
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              border: Border.all(
+                color: selected
+                    ? AppColors.primary
+                    : const Color(0xFFE5E7EB),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                day.label,
+                style: AppTextStyles.caption.copyWith(
+                  color: selected ? Colors.white : AppColors.textSecondary,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _WeekdayOption {
+  final String label;
+  final int mask;
+
+  const _WeekdayOption({
+    required this.label,
+    required this.mask,
+  });
+}
+
 // ── Recurrence chips ──────────────────────────────────────────────────────────
 
 class _RecurrenceChips extends StatelessWidget {
@@ -708,50 +833,69 @@ class _IntervalRow extends StatelessWidget {
 class _DateTimeButton extends StatelessWidget {
   final String label;
   final bool hasValue;
+  final bool hasError;
+  final String? errorText;
   final VoidCallback onTap;
 
-  const _DateTimeButton(
-      {required this.label, required this.hasValue, required this.onTap});
+  const _DateTimeButton({
+    required this.label,
+    required this.hasValue,
+    required this.onTap,
+    this.hasError = false,
+    this.errorText,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: hasValue
-                ? AppColors.primary.withOpacity(0.4)
-                : const Color(0xFFE5E7EB),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: hasError
+                    ? AppColors.danger
+                    : hasValue
+                        ? AppColors.primary.withOpacity(0.4)
+                        : const Color(0xFFE5E7EB),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today_outlined,
+                    size: 16,
+                    color: hasError
+                        ? AppColors.danger
+                        : hasValue
+                            ? AppColors.primary
+                            : AppColors.textSecondary),
+                const SizedBox(width: AppSpacing.sm),
+                Text(label,
+                    style: AppTextStyles.body.copyWith(
+                      color: hasError
+                          ? AppColors.danger
+                          : hasValue
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary,
+                      fontWeight:
+                          hasValue || hasError ? FontWeight.w500 : FontWeight.w400,
+                    )),
+                const Spacer(),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 18, color: AppColors.textSecondary),
+              ],
+            ),
           ),
         ),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 16,
-                color: hasValue
-                    ? AppColors.primary
-                    : AppColors.textSecondary),
-            const SizedBox(width: AppSpacing.sm),
-            Text(label,
-                style: AppTextStyles.body.copyWith(
-                  color: hasValue
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
-                  fontWeight:
-                      hasValue ? FontWeight.w500 : FontWeight.w400,
-                )),
-            const Spacer(),
-            Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textSecondary),
-          ],
-        ),
-      ),
+        if (hasError && errorText != null) _FieldErrorText(errorText!),
+      ],
     );
   }
 }
@@ -796,6 +940,9 @@ class _InputField extends StatelessWidget {
   final int maxLines;
   final TextInputType keyboardType;
   final List<TextInputFormatter> inputFormatters;
+  final bool hasError;
+  final String? errorText;
+  final ValueChanged<String>? onChanged;
 
   const _InputField({
     required this.controller,
@@ -804,33 +951,48 @@ class _InputField extends StatelessWidget {
     this.maxLines = 1,
     this.keyboardType = TextInputType.text,
     this.inputFormatters = const [],
+    this.hasError = false,
+    this.errorText,
+    this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: TextField(
-        controller: controller,
-        maxLines: maxLines,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.body.copyWith(
-              color: AppColors.textSecondary.withOpacity(0.5)),
-          prefixIcon:
-              Icon(icon, size: 18, color: AppColors.textSecondary),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md, vertical: AppSpacing.md),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: hasError ? AppColors.danger : const Color(0xFFE5E7EB),
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            maxLines: maxLines,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            onChanged: onChanged,
+            style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTextStyles.body.copyWith(
+                  color: AppColors.textSecondary.withOpacity(0.5)),
+              prefixIcon: Icon(
+                icon,
+                size: 18,
+                color: hasError ? AppColors.danger : AppColors.textSecondary,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md, vertical: AppSpacing.md),
+            ),
+          ),
         ),
-      ),
+        if (hasError && errorText != null) _FieldErrorText(errorText!),
+      ],
     );
   }
 }
@@ -849,9 +1011,33 @@ class _Label extends StatelessWidget {
       );
 }
 
+
+
+// ── Field validation text ───────────────────────────────────────────────────
+
+class _FieldErrorText extends StatelessWidget {
+  final String message;
+
+  const _FieldErrorText(this.message);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, left: 4),
+      child: Text(
+        message,
+        style: AppTextStyles.caption.copyWith(
+          color: AppColors.danger,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 Color _hexToColor(String hex) {
-  final h = hex.replaceAll('#', '');
-  return Color(int.parse('FF$h', radix: 16));
+  final normalized = hex.replaceAll('#', '');
+  return Color(int.parse('FF$normalized', radix: 16));
 }

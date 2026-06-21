@@ -14,7 +14,7 @@ namespace taskly.Data
 
         public DbSet<Entry> Entries { get; set; }
 
-        public DbSet<EntryAnomaly> EntryOccurrences { get; set; }
+        public DbSet<EntryAnomaly> EntryAnomalies { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

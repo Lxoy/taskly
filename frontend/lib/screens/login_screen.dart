@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:frontend/core/theme/app_colors.dart';
-import 'package:frontend/core/theme/app_text_styles.dart';
-import 'package:frontend/core/theme/app_spacing.dart';
 import 'package:frontend/core/theme/app_radius.dart';
+import 'package:frontend/core/theme/app_spacing.dart';
+import 'package:frontend/core/theme/app_text_styles.dart';
 import 'package:frontend/features/auth/bloc/auth_bloc.dart';
 import 'register_screen.dart';
-import 'app_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,9 +15,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController    = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword     = true;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -27,319 +26,310 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _onLoginPressed() {
-    final email    = _emailController.text.trim();
+  void _submit() {
+    final email = _emailController.text.trim();
     final password = _passwordController.text;
-    if (email.isEmpty || password.isEmpty) return;
+
+    if (email.isEmpty || password.isEmpty) {
+      _showSnack('Enter your email and password.', AppColors.warning);
+      return;
+    }
+
     context.read<AuthBloc>().add(
           LoginSubmitted(email: email, password: password),
         );
+  }
+
+  void _showSnack(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthAuthenticated) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const AppShell()),
-            (route) => false,
-          );
-        }
         if (state is AuthError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.danger,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
-              margin: const EdgeInsets.fromLTRB(
-                AppSpacing.md, 0, AppSpacing.md, AppSpacing.md,
-              ),
-            ),
-          );
+          _showSnack(state.message, AppColors.danger);
         }
       },
       child: Scaffold(
-        // Koristimo AppTheme.light scaffoldBackgroundColor = AppColors.background
+        backgroundColor: AppColors.background,
         body: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                // ── Hero ──────────────────────────────────────────────
-                _HeroSection(),
-                // ── Form ──────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg, AppSpacing.lg,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.lg,
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - AppSpacing.lg * 2,
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Dobrodošao nazad', style: AppTextStyles.title.copyWith(color: AppColors.textPrimary)),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text('Prijavi se na svoj račun', style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
                       const SizedBox(height: AppSpacing.xl),
-
-                      _buildLabel('Email adresa'),
+                      const _BrandMark(),
+                      const SizedBox(height: AppSpacing.xxl),
+                      Text(
+                        'Welcome back',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.title.copyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.8,
+                        ),
+                      ),
                       const SizedBox(height: AppSpacing.sm),
-                      _buildTextField(
+                      Text(
+                        'Stay organized. Without the effort.',
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.textSecondary,
+                          height: 1.45,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+                      _AuthField(
                         controller: _emailController,
-                        hint: 'ime@primjer.com',
+                        label: 'Email',
+                        hint: 'you@example.com',
                         icon: Icons.mail_outline_rounded,
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: AppSpacing.md),
-
-                      _buildLabel('Lozinka'),
-                      const SizedBox(height: AppSpacing.sm),
-                      _buildTextField(
+                      _AuthField(
                         controller: _passwordController,
-                        hint: '••••••••',
+                        label: 'Password',
+                        hint: 'Password',
                         icon: Icons.lock_outline_rounded,
-                        obscure: _obscurePassword,
-                        suffixIcon: GestureDetector(
-                          onTap: () => setState(() => _obscurePassword = !_obscurePassword),
-                          child: Icon(
-                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                        obscureText: _obscurePassword,
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(
+                            () => _obscurePassword = !_obscurePassword,
+                          ),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: AppColors.textSecondary,
                             size: 20,
                           ),
                         ),
                       ),
-
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.sm),
-                          child: Text(
-                            'Zaboravljena lozinka?',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
+                      const SizedBox(height: AppSpacing.xl),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) {
+                          return _PrimaryButton(
+                            label: 'Log in',
+                            isLoading: state is AuthLoading,
+                            onTap: _submit,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Center(
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const RegisterScreen(),
+                            ),
+                          ),
+                          child: RichText(
+                            text: TextSpan(
+                              style: AppTextStyles.body.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                              children: [
+                                const TextSpan(text: 'New to Taskly? '),
+                                TextSpan(
+                                  text: 'Create account',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
-
-                      // Login button
-                      BlocBuilder<AuthBloc, AuthState>(
-                        builder: (context, state) {
-                          final isLoading = state is AuthLoading;
-                          return GestureDetector(
-                            onTap: isLoading ? null : _onLoginPressed,
-                            child: _PrimaryButton(label: 'Prijavi se', isLoading: isLoading),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-
-                      _buildDivider(),
-                      const SizedBox(height: AppSpacing.md),
-
-                      _buildSocialButton(
-                        icon: Icons.g_mobiledata_rounded,
-                        label: 'Nastavi s Googleom',
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text("Nemaš račun? ", style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
-                          GestureDetector(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                            ),
-                            child: Text(
-                              'Registriraj se',
-                              style: AppTextStyles.body.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
                     ],
                   ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildLabel(String text) => Text(
-        text,
-        style: AppTextStyles.caption.copyWith(
-          color: AppColors.textSecondary,
-          fontWeight: FontWeight.w500,
-        ),
-      );
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    bool obscure = false,
-    TextInputType keyboardType = TextInputType.text,
-    Widget? suffixIcon,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-        keyboardType: keyboardType,
-        style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.body.copyWith(color: AppColors.textSecondary.withOpacity(0.5)),
-          prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
-          suffixIcon: suffixIcon,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDivider() => Row(
-        children: [
-          Expanded(child: Divider(color: AppColors.textSecondary.withOpacity(0.2), thickness: 1)),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-            child: Text('ili', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-          ),
-          Expanded(child: Divider(color: AppColors.textSecondary.withOpacity(0.2), thickness: 1)),
-        ],
-      );
-
-  Widget _buildSocialButton({required IconData icon, required String label}) {
-    return Container(
-      width: double.infinity,
-      height: 52,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: AppColors.textSecondary, size: 26),
-          const SizedBox(width: AppSpacing.sm),
-          Text(label, style: AppTextStyles.body.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
-        ],
       ),
     );
   }
 }
 
-// ── Hero section ──────────────────────────────────────────────────────────────
+class _BrandMark extends StatelessWidget {
+  const _BrandMark();
 
-class _HeroSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 220,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(AppRadius.xl),
-          bottomRight: Radius.circular(AppRadius.xl),
-        ),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Positioned(
-            top: -20, right: -20,
-            child: Container(
-              width: 140, height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.07),
+    return Column(
+      children: [
+        Container(
+          width: 68,
+          height: 68,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.25),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
               ),
-            ),
-          ),
-          Positioned(
-            bottom: -30, left: -10,
-            child: Container(
-              width: 110, height: 110,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.05),
-              ),
-            ),
-          ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 64, height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: const Icon(Icons.account_balance_wallet_rounded, color: Colors.white, size: 32),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              const Text('ObvezaTrack', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.3)),
-              const SizedBox(height: 4),
-              Text('Upravljaj svojim troškovima', style: TextStyle(color: Colors.white.withOpacity(0.65), fontSize: 13)),
             ],
           ),
-        ],
-      ),
+          child: const Icon(
+            Icons.done_rounded,
+            color: Colors.white,
+            size: 34,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Taskly',
+          style: AppTextStyles.subtitle.copyWith(
+            color: AppColors.textPrimary,
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ],
     );
   }
 }
 
-// ── Primary button ────────────────────────────────────────────────────────────
+class _AuthField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final bool obscureText;
+  final TextInputType keyboardType;
+  final Widget? suffixIcon;
+
+  const _AuthField({
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    this.obscureText = false,
+    this.keyboardType = TextInputType.text,
+    this.suffixIcon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            keyboardType: keyboardType,
+            style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTextStyles.body.copyWith(
+                color: AppColors.textSecondary.withOpacity(0.48),
+              ),
+              prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
+              suffixIcon: suffixIcon,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.md,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _PrimaryButton extends StatelessWidget {
   final String label;
   final bool isLoading;
+  final VoidCallback onTap;
 
-  const _PrimaryButton({required this.label, this.isLoading = false});
+  const _PrimaryButton({
+    required this.label,
+    required this.onTap,
+    this.isLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 52,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 180),
+        opacity: isLoading ? 0.7 : 1,
+        child: Container(
+          width: double.infinity,
+          height: 56,
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
-        ],
-      ),
-      child: Center(
-        child: isLoading
-            ? const SizedBox(
-                width: 22, height: 22,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-              )
-            : Text(label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.4,
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+          ),
+        ),
       ),
     );
   }

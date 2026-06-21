@@ -26,19 +26,41 @@ namespace taskly.Data.Configurations
             builder.Property(e => e.OccurrenceDate)
                 .IsRequired();
 
-            builder.Property(e => e.Status)
+            builder.Property(e => e.NewOccurrenceDate);
+
+            builder.Property(e => e.Title)
+                .IsRequired()
+                .HasMaxLength(255);
+
+            builder.Property(e => e.Description);
+
+            builder.Property(e => e.Amount)
+                .HasPrecision(10, 2);
+
+            builder.Property(e => e.Priority)
                 .IsRequired();
+
+            builder.Property(e => e.CategoryId);
+
+            builder.Property(e => e.IsDeleted)
+                .IsRequired()
+                .HasDefaultValue(false);
 
             builder.HasOne(e => e.Entry)
                 .WithMany(e => e.EntryOccurrences)
                 .HasForeignKey(e => e.EntryId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasIndex(e => e.EntryId);
+            builder.HasOne(e => e.Category)
+                .WithMany()
+                .HasForeignKey(e => e.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
 
+            builder.HasIndex(e => e.EntryId);
             builder.HasIndex(e => e.OccurrenceDate);
 
-            builder.HasIndex(e => new { e.EntryId, e.OccurrenceDate });
+            builder.HasIndex(e => new { e.EntryId, e.OccurrenceDate })
+                .IsUnique();
         }
     }
 }

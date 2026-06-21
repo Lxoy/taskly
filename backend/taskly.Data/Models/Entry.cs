@@ -12,9 +12,11 @@ namespace taskly.Data.Models
         public decimal? Amount { get; set; }
         public Priority Priority { get; set; } = Priority.Low;
         public RecurrenceType RecurrenceType { get; set; } = RecurrenceType.Once;
-        public int RecurrenceInterval { get; set; }
+        public int RecurrenceInterval { get; set; } = 1;
+        public WeekDays? RecurrenceDaysMask { get; set; }
         public DateTime ScheduledDate { get; set; }
         public DateTime? RecurrenceEndDate { get; set; }
+        public int SeriesId { get; set; }
         public User User { get; set; } = null!;
 
         public Category? Category { get; set; }

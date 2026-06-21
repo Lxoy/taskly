@@ -17,6 +17,7 @@ namespace taskly.Services
             services.AddScoped<IEntryAnomalyService, EntryAnomalyService>();
             services.AddScoped<IHomeService, HomeService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IStatsService, StatsService>();
 
             return services;
         }
