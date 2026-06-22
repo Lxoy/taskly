@@ -34,17 +34,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final password = _passwordController.text;
 
     if (username.isEmpty || email.isEmpty || password.isEmpty) {
-      _showSnack('Fill in all required fields.', AppColors.warning);
+      _showSnack('Please fill in all fields.', AppColors.warning);
+      return;
+    }
+
+    if (!email.contains('@')) {
+      _showSnack('Please enter a valid email address.', AppColors.warning);
+      return;
+    }
+
+    if (password.length < 6) {
+      _showSnack('Password must be at least 6 characters.', AppColors.warning);
       return;
     }
 
     context.read<AuthBloc>().add(
-          RegisterSubmitted(
-            email: email,
-            username: username,
-            password: password,
-          ),
-        );
+      RegisterSubmitted(email: email, username: username, password: password),
+    );
   }
 
   void _showSnack(String message, Color color) {
@@ -65,6 +71,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+
         if (state is AuthError) {
           _showSnack(state.message, AppColors.danger);
         }
@@ -88,9 +98,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     children: [
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: _BackButton(
-                          onTap: () => Navigator.pop(context),
-                        ),
+                        child: _BackButton(onTap: () => Navigator.pop(context)),
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       const _BrandMark(),
@@ -118,7 +126,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _AuthField(
                         controller: _usernameController,
                         label: 'Username',
-                        hint: 'lovro',
+                        hint: 'taskly_user',
                         icon: Icons.person_outline_rounded,
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -169,7 +177,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 color: AppColors.textSecondary,
                               ),
                               children: [
-                                const TextSpan(text: 'Already have an account? '),
+                                const TextSpan(
+                                  text: 'Already have an account? ',
+                                ),
                                 TextSpan(
                                   text: 'Log in',
                                   style: TextStyle(
@@ -243,11 +253,7 @@ class _BrandMark extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.done_rounded,
-            color: Colors.white,
-            size: 34,
-          ),
+          child: const Icon(Icons.done_rounded, color: Colors.white, size: 34),
         ),
         const SizedBox(height: AppSpacing.md),
         Text(

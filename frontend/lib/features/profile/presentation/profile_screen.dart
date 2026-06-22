@@ -22,11 +22,9 @@ class ProfileScreen extends StatelessWidget {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // ── Header ──────────────────────────────────────────────
               _ProfileHeader(),
               const SizedBox(height: AppSpacing.lg),
 
-              // ── Customisation ────────────────────────────────────────
               _SectionHeader('Customisation'),
               _SettingsRow(
                 icon: Icons.category_outlined,
@@ -36,18 +34,20 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () async {
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const CategoriesScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const CategoriesScreen(),
+                    ),
                   );
+
                   if (context.mounted) {
                     context.read<CategoryBloc>().add(
-                      const CategoriesFetchRequested(),
-                    );
+                          const CategoriesFetchRequested(),
+                        );
                   }
                 },
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              // ── Account ──────────────────────────────────────────────
               _SectionHeader('Account'),
               _SettingsRow(
                 icon: Icons.person_outline_rounded,
@@ -82,7 +82,6 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
 
-              // ── General ──────────────────────────────────────────────
               _SectionHeader('General'),
               _SettingsRow(
                 icon: Icons.notifications_outlined,
@@ -117,11 +116,15 @@ class ProfileScreen extends StatelessWidget {
         ),
         title: Text(
           'Log out?',
-          style: AppTextStyles.subtitle.copyWith(color: AppColors.textPrimary),
+          style: AppTextStyles.subtitle.copyWith(
+            color: AppColors.textPrimary,
+          ),
         ),
         content: Text(
           'Are you sure you want to log out?',
-          style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+          style: AppTextStyles.body.copyWith(
+            color: AppColors.textSecondary,
+          ),
         ),
         actions: [
           TextButton(
@@ -152,8 +155,6 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-// ── Profile header ────────────────────────────────────────────────────────────
-
 class _ProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -164,12 +165,12 @@ class _ProfileHeader extends StatelessWidget {
 
     final initials = username != null && username.isNotEmpty
         ? username
-              .trim()
-              .split(' ')
-              .where((p) => p.isNotEmpty)
-              .map((p) => p[0].toUpperCase())
-              .take(2)
-              .join()
+            .trim()
+            .split(' ')
+            .where((p) => p.isNotEmpty)
+            .map((p) => p[0].toUpperCase())
+            .take(2)
+            .join()
         : '?';
 
     return Container(
@@ -221,10 +222,9 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-// ── Section header ────────────────────────────────────────────────────────────
-
 class _SectionHeader extends StatelessWidget {
   final String title;
+
   const _SectionHeader(this.title);
 
   @override
@@ -250,8 +250,6 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
-
-// ── Settings row ──────────────────────────────────────────────────────────────
 
 class _SettingsRow extends StatelessWidget {
   final IconData icon;
@@ -287,7 +285,9 @@ class _SettingsRow extends StatelessWidget {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.md,
         ),
-        decoration: const BoxDecoration(color: AppColors.surface),
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+        ),
         child: Row(
           children: [
             Container(
@@ -297,7 +297,11 @@ class _SettingsRow extends StatelessWidget {
                 color: iconColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
-              child: Icon(icon, color: iconColor, size: 18),
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: 18,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(

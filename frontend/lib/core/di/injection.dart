@@ -1,3 +1,4 @@
+import 'package:frontend/core/notifications/notification_service.dart';
 import 'package:frontend/data/repositories/stats_repository_impl.dart';
 import 'package:frontend/domain/stats_repository.dart';
 import 'package:frontend/features/statistics/bloc/stats_block.dart';
@@ -27,9 +28,7 @@ Future<void> configureDependencies() async {
     defaultValue: 'http://10.0.2.2:5090',
   );
 
-  sl.registerLazySingleton<ApiClient>(
-    () => ApiClient(baseUrl: baseUrl),
-  );
+  sl.registerLazySingleton<ApiClient>(() => ApiClient(baseUrl: baseUrl));
 
   // ── Repositories ─────────────────────────────────────────────
   sl.registerLazySingleton<AuthRepository>(
@@ -52,24 +51,20 @@ Future<void> configureDependencies() async {
   sl.registerFactory<AuthBloc>(
     () => AuthBloc(sl<AuthRepository>(), sl<ApiClient>()),
   );
-  sl.registerFactory<HomeBloc>(
-    () => HomeBloc(sl<HomeRepository>()),
-  );
+  sl.registerFactory<HomeBloc>(() => HomeBloc(sl<HomeRepository>()));
   sl.registerFactory<CategoryBloc>(
     () => CategoryBloc(sl<CategoryRepository>()),
   );
-  sl.registerFactory<EntryBloc>(
-    () => EntryBloc(sl<EntryRepository>()),
-  );
+  sl.registerFactory<EntryBloc>(() => EntryBloc(sl<EntryRepository>()));
   sl.registerFactory<UserBloc>(
     () => UserBloc(sl<UserRepository>(), sl<ApiClient>()),
   );
 
-  sl.registerLazySingleton<StatsRepository>(
-  () => StatsRepositoryImpl(sl()),
-);
+  sl.registerLazySingleton<StatsRepository>(() => StatsRepositoryImpl(sl()));
 
-sl.registerFactory(
-  () => StatsBloc(sl()),
-);
+  sl.registerFactory(() => StatsBloc(sl()));
+
+  sl.registerLazySingleton<NotificationService>(
+    () => NotificationService(sl<ApiClient>()),
+  );
 }

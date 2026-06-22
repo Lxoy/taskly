@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace taskly.Data.Models
+﻿namespace taskly.Data.Models
 {
     public class Category : BaseEntity
     {
