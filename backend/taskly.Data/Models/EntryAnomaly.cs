@@ -4,7 +4,6 @@ namespace taskly.Data.Models
 {
     public class EntryAnomaly : BaseEntity
     {
-        public bool IsActive { get; set; } = true;
 
         public int EntryId { get; set; }
 

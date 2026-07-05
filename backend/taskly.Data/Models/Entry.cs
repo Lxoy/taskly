@@ -4,7 +4,6 @@ namespace taskly.Data.Models
 {
     public class Entry : BaseEntity
     {
-        public bool IsActive { get; set; } = true;
         public int UserId { get; set; }
         public int? CategoryId { get; set; }
         public string Title { get; set; } = string.Empty;

@@ -19,14 +19,14 @@ class NotificationService {
     if (token != null) {
       await apiClient.dio.post(
         '/api/notifications/register-token',
-        data: {'token': token},
+        data: {'token': token, 'platform': 'android'},
       );
     }
 
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       await apiClient.dio.post(
         '/api/notifications/register-token',
-        data: {'token': newToken},
+        data: {'token': newToken, 'platform': 'android'},
       );
     });
   }

@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +14,7 @@ using taskly.API.Handlers;
 using taskly.Data;
 using taskly.Services;
 using taskly.Services.Dtos.Base;
+using taskly.Services.Jobs;
 using taskly.Services.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -102,6 +107,20 @@ builder.Services
         };
     });
 
+FirebaseApp.Create(new AppOptions
+{
+    Credential = GoogleCredential.FromFile(
+        "firebase/firebase-service-account.json")
+});
+
+builder.Services.AddHangfire(config =>
+{
+    config.UsePostgreSqlStorage(
+        builder.Configuration.GetConnectionString("Database"));
+});
+
+builder.Services.AddHangfireServer();
+
 var app = builder.Build();
 
 app.UseExceptionHandler(appBuilder =>
@@ -127,6 +146,8 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseHangfireDashboard("/hangfire");
+
 app.MapControllers();
 
 using var scope = app.Services.CreateScope();
@@ -136,5 +157,17 @@ var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 var canConnect = await db.Database.CanConnectAsync();
 
 Console.WriteLine($"DATABASE CONNECTED: {canConnect}");
+
+RecurringJob.AddOrUpdate<ReminderNotificationJob>(
+    "reminder-notifications",
+    job => job.RunAsync(),
+    "*/5 * * * *"
+);
+
+RecurringJob.AddOrUpdate<ReminderMaintenanceJob>(
+    "reminder-maintenance",
+    job => job.RunAsync(),
+    "*/5 * * * *"
+);
 
 app.Run();

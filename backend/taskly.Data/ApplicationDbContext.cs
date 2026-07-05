@@ -16,6 +16,10 @@ namespace taskly.Data
 
         public DbSet<EntryAnomaly> EntryAnomalies { get; set; }
 
+        public DbSet<Reminder> Reminders { get; set; }
+
+        public DbSet<UserNotificationToken> UserNotificationTokens { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(
